@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -15,7 +15,7 @@ function message(msg,bad=false){const el=$("#authMsg");el.textContent=msg;el.sty
 async function load(){
  const snap=await getDoc(doc(db,"portfolios",user.uid));
  if(snap.exists()) data={...defaults,...snap.data()};
- else {data={...defaults,name:user.displayName||"",slug:""};await saveNow()}
+ else {data={...defaults,name:user.displayName||"",slug:slugify(user.displayName||"student")};await saveNow()}
  sync();
 }
 async function saveNow(extra={}){
@@ -41,8 +41,7 @@ function renderStats(){const skills=data.skills.split(",").filter(x=>x.trim()).l
 function sync(){["name","headline","about","school","aspiration","skills"].forEach(k=>$("#"+k).value=data[k]||"");$$(".theme").forEach(b=>b.classList.toggle("active",b.dataset.theme===data.theme));renderPreview();renderExp();renderStats();$("#publishedBadge").textContent=data.published?"Published":"Draft";$("#userEmail").textContent=user?.email||""}
 function showApp(logged){$("#authScreen").style.display=logged?"none":"grid";$("#appShell").style.display=logged?"grid":"none"}
 onAuthStateChanged(auth,async u=>{user=u;showApp(!!u);if(u){try{await load()}catch(e){alert("Could not load portfolio: "+e.message)}}});
-$("#signUp").onclick=async()=>{try{message("Creating account…");await createUserWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);message("Account created.")}catch(e){message(e.message,true)}};
-$("#signIn").onclick=async()=>{try{message("Signing in…");await signInWithEmailAndPassword(auth,$("#email").value.trim(),$("#password").value);message("")}catch(e){message(e.message,true)}};
+$("#googleSignIn").onclick=async()=>{try{message("Opening Google sign-in…");const provider=new GoogleAuthProvider();provider.setCustomParameters({prompt:"select_account"});await signInWithPopup(auth,provider);message("")}catch(e){message(e.message,true)}};
 $("#signOut").onclick=()=>signOut(auth);
 ["name","headline","about","school","aspiration","skills"].forEach(k=>$("#"+k).addEventListener("input",e=>{data[k]=e.target.value;if(k==="name"&&!data.published)data.slug=slugify(data.name);renderPreview();renderStats();queueSave()}));
 $$(".nav button").forEach(b=>b.onclick=()=>{$$(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");$$(".page").forEach(x=>x.classList.remove("active"));$("#"+b.dataset.page).classList.add("active");const t={profile:["Build your portfolio","Your work is now saved securely to your account."],experiences:["Your experiences","Show what you have done — and what you learned."],themes:["Make it yours","Choose a style without worrying about web design."],publish:["Share your portfolio","Publish your portfolio when you are ready."]}[b.dataset.page];$("#pageTitle").textContent=t[0];$("#pageSub").textContent=t[1]});
