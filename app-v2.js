@@ -14,7 +14,19 @@ const initials=()=>data.name.split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpp
 function message(msg,bad=false){const el=$("#authMsg");el.textContent=msg;el.style.color=bad?"#b42318":"#20a66a"}
 async function load(){
  const snap=await getDoc(doc(db,"portfolios",user.uid));
- if(snap.exists()) data={...defaults,...snap.data()};
+ if(snap.exists()){
+  data={...defaults,...snap.data()};
+  // Normalise legacy experiences so entries created before V2.2 remain editable.
+  data.experiences=Array.isArray(data.experiences)?data.experiences.map(e=>({
+    title:e?.title||"",
+    type:e?.type||e?.category||"School Experience",
+    year:e?.year||e?.date||"",
+    description:e?.description||"",
+    text:e?.text||e?.reflection||e?.description||"",
+    skills:e?.skills||"",
+    featured:!!e?.featured
+  })):[];
+}
  else {data={...defaults,name:user.displayName||"",slug:slugify(user.displayName||"student")};await saveNow()}
  sync();
 }
@@ -52,7 +64,7 @@ $$(".nav button").forEach(b=>b.onclick=()=>{$$(".nav button").forEach(x=>x.class
 $$(".theme").forEach(b=>b.onclick=()=>{data.theme=b.dataset.theme;sync();queueSave()});
 function openExperience(index=-1){
  const e=index>=0?data.experiences[index]:{title:"",type:"School Experience",year:new Date().getFullYear().toString(),description:"",text:"",skills:"",featured:false};
- $("#expEditIndex").value=index;$("#expModalTitle").textContent=index>=0?"Edit experience":"Add an experience";$("#expTitle").value=e.title||"";$("#expType").value=e.type||"School Experience";$("#expYear").value=e.year||"";$("#expDescription").value=e.description||"";$("#expText").value=e.text||"";$("#expSkills").value=e.skills||"";$("#expFeatured").checked=!!e.featured;$("#expModal").classList.add("show");
+ $("#expEditIndex").value=index;$("#expModalTitle").textContent=index>=0?"Edit experience":"Add an experience";$("#expTitle").value=e.title||"";const validTypes=Array.from($("#expType").options).map(o=>o.value);$("#expType").value=validTypes.includes(e.type)?e.type:"School Experience";$("#expYear").value=e.year||"";$("#expDescription").value=e.description||"";$("#expText").value=e.text||"";$("#expSkills").value=e.skills||"";$("#expFeatured").checked=!!e.featured;$("#expModal").classList.add("show");
 }
 $("#addExp").onclick=()=>openExperience();
 $("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("show"));
